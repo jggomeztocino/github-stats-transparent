@@ -292,7 +292,8 @@ permission write read token expired revoked bad forbidden unauthorized ssl
 certificate problem could resolve host timed out connection terminal prompts
 disabled username password rate limit limited blocked sso saml enforcement
 organization authorized enabled http https 401 403 404 429 500 502 503 504
-unknown config configuration reading files""".split())
+unknown config configuration reading files request
+token tokens personal fine grained resource accessible scope scopes lifetime policy sso saml protected""".split())
 
 
 def failure_category(returncode: int, stderr: bytes) -> str:
@@ -301,9 +302,10 @@ def failure_category(returncode: int, stderr: bytes) -> str:
     repository names, URLs and paths can never reach the log."""
     words = []
     for w in re.findall(r"[A-Za-z0-9]+", stderr.decode(errors="replace")):
-        if w.lower() in _SAFE_WORDS and w.lower() not in words:
+        if ((w.lower() in _SAFE_WORDS or re.fullmatch(r"[1-5]\d\d", w))
+                and w.lower() not in words):
             words.append(w.lower())
-    return f"exit{returncode}:" + "-".join(words[:12])
+    return f"exit{returncode}:" + "-".join(words[:16])
 
 
 FAILURES: collections.Counter = collections.Counter()
