@@ -316,10 +316,15 @@ def _url(repo: str) -> str:
 
 
 def list_heads(repo: str, env: Dict[str, str]) -> Optional[List[str]]:
-    """`<sha> <ref>` lines of the repo's branch heads, or None on failure."""
+    """`<sha> <ref>` lines of the repo's branch heads, or None on failure.
+
+    Runs outside any git repository: in Actions the checked-out workspace has
+    its own extraheader (actions/checkout), which would be sent in addition to
+    ours and make GitHub answer 400."""
     try:
         r = subprocess.run(["git", "ls-remote", "--heads", _url(repo)],
-                           env=env, capture_output=True, timeout=300)
+                           env=env, capture_output=True, timeout=300,
+                           cwd=tempfile.gettempdir())
     except subprocess.TimeoutExpired:
         FAILURES["ls-remote timeout"] += 1
         return None
@@ -337,7 +342,7 @@ def analyze_repo(repo: str, env: Dict[str, str], identity: Identity,
         d = os.path.join(tmp, "r")
         try:
             r = subprocess.run(["git", "clone", "--quiet", "--no-checkout",
-                                _url(repo), d], env=env,
+                                _url(repo), d], env=env, cwd=tmp,
                                capture_output=True, timeout=CLONE_TIMEOUT)
             if r.returncode != 0:
                 FAILURES["clone " + failure_category(r.returncode, r.stderr)] += 1
