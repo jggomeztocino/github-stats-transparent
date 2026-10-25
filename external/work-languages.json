@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "generated_at": "2026-10-25T22:36:41Z",
-  "window_months": 24,
+  "generated_at": "2026-10-25T22:58:55Z",
+  "window_months": null,
   "metric": "bytes_added",
   "languages": {
-    "Gherkin": 87090,
-    "Java": 1335752,
-    "JavaScript": 3696,
-    "Python": 825702,
-    "SQL": 63878
+    "Gherkin": 69043,
+    "Java": 928082,
+    "JavaScript": 3604,
+    "Python": 746809,
+    "SQL": 52642
   }
 }
