@@ -46,6 +46,12 @@ jobs:
         python3 -m pip install --upgrade pip setuptools wheel
         python3 -m pip install -r requirements.txt
 
+    # Fail fast on an invalid token instead of publishing all-zero images
+    - name: Check ACCESS_TOKEN
+      run: gh api user --jq .login > /dev/null
+      env:
+        GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
     # Generate all statistics images
     - name: Generate images
       run: |
@@ -57,6 +63,18 @@ jobs:
         EXCLUDED: ${{ secrets.EXCLUDED }}
         EXCLUDED_LANGS: ${{ secrets.EXCLUDED_LANGS }}
         COUNT_STATS_FROM_FORKS: ${{ secrets.COUNT_STATS_FROM_FORKS }}
+
+    # Refuse to publish empty stats (e.g. token without access)
+    - name: Check generated output
+      run: |
+        if grep -q "No Name" generated/overview.svg; then
+          echo "::error::generated/overview.svg has no user name (invalid or under-scoped ACCESS_TOKEN?); not publishing"
+          exit 1
+        fi
+        if ! grep -q "<li " generated/languages.svg; then
+          echo "::error::generated/languages.svg has no language entries; not publishing"
+          exit 1
+        fi
 
     # Commits all changed files to the repository
     - name: Commit to the output branch of repo
