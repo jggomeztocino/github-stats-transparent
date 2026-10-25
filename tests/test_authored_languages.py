@@ -229,5 +229,15 @@ class CacheKey(unittest.TestCase):
         self.assertTrue(name.endswith(".json"))
 
 
+class FailureCategory(unittest.TestCase):
+    def test_categories_never_echo_stderr(self):
+        f = A.failure_category
+        self.assertEqual(f(128, b"fatal: Authentication failed for 'x'"), "auth")
+        self.assertEqual(f(128, b"remote: Repository not found."), "notfound")
+        self.assertEqual(f(128, b"The requested URL returned error: 403"),
+                         "denied")
+        self.assertEqual(f(1, b"weird secret-repo text"), "exit1")
+
+
 if __name__ == "__main__":
     unittest.main()

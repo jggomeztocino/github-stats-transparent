@@ -286,6 +286,23 @@ def _git_env(token: str) -> Dict[str, str]:
     return env
 
 
+def failure_category(returncode: int, stderr: bytes) -> str:
+    """Coarse, name-free reason for a failed git call (safe for public logs)."""
+    text = stderr.decode(errors="replace").lower()
+    if "authentication failed" in text or "could not read username" in text:
+        return "auth"
+    if "not found" in text:
+        return "notfound"
+    if "403" in text or "denied" in text or "forbidden" in text:
+        return "denied"
+    if "timed out" in text or "could not resolve" in text:
+        return "network"
+    return f"exit{returncode}"
+
+
+FAILURES: collections.Counter = collections.Counter()
+
+
 def _url(repo: str) -> str:
     return f"https://github.com/{repo}.git"
 
@@ -296,8 +313,10 @@ def list_heads(repo: str, env: Dict[str, str]) -> Optional[List[str]]:
         r = subprocess.run(["git", "ls-remote", "--heads", _url(repo)],
                            env=env, capture_output=True, timeout=300)
     except subprocess.TimeoutExpired:
+        FAILURES["ls-remote timeout"] += 1
         return None
     if r.returncode != 0:
+        FAILURES["ls-remote " + failure_category(r.returncode, r.stderr)] += 1
         return None
     return [ln.replace("\t", " ") for ln in
             r.stdout.decode(errors="replace").splitlines() if ln.strip()]
@@ -313,6 +332,7 @@ def analyze_repo(repo: str, env: Dict[str, str], identity: Identity,
                                 _url(repo), d], env=env,
                                capture_output=True, timeout=CLONE_TIMEOUT)
             if r.returncode != 0:
+                FAILURES["clone " + failure_category(r.returncode, r.stderr)] += 1
                 return None
             ga = subprocess.run(["git", "-C", d, "show", "HEAD:.gitattributes"],
                                 env=env, capture_output=True, timeout=300)
@@ -483,8 +503,9 @@ def run(token: str, emails_value: Optional[str],
         msg += f", {stale} stale"
     print(msg)
     if failed:
+        reasons = ", ".join(f"{k} x{v}" for k, v in sorted(FAILURES.items()))
         raise RuntimeError(f"{failed} repositories could not be analysed "
-                           "and have no cached result")
+                           f"and have no cached result ({reasons})")
     sizes = {k: v for k, v in sizes.items() if v > 0}
     if not sizes:
         raise RuntimeError("authored languages total is empty "
