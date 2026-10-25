@@ -286,18 +286,24 @@ def _git_env(token: str) -> Dict[str, str]:
     return env
 
 
+_SAFE_WORDS = set("""fatal remote unable access error requested url returned
+repository not found authentication failed invalid credentials denied
+permission write read token expired revoked bad forbidden unauthorized ssl
+certificate problem could resolve host timed out connection terminal prompts
+disabled username password rate limit limited blocked sso saml enforcement
+organization authorized enabled http https 401 403 404 429 500 502 503 504
+unknown config configuration reading files""".split())
+
+
 def failure_category(returncode: int, stderr: bytes) -> str:
-    """Coarse, name-free reason for a failed git call (safe for public logs)."""
-    text = stderr.decode(errors="replace").lower()
-    if "authentication failed" in text or "could not read username" in text:
-        return "auth"
-    if "not found" in text:
-        return "notfound"
-    if "403" in text or "denied" in text or "forbidden" in text:
-        return "denied"
-    if "timed out" in text or "could not resolve" in text:
-        return "network"
-    return f"exit{returncode}"
+    """Name-free reason for a failed git call (safe for public logs): the exit
+    code plus only the words of git's message found in a fixed vocabulary, so
+    repository names, URLs and paths can never reach the log."""
+    words = []
+    for w in re.findall(r"[A-Za-z0-9]+", stderr.decode(errors="replace")):
+        if w.lower() in _SAFE_WORDS and w.lower() not in words:
+            words.append(w.lower())
+    return f"exit{returncode}:" + "-".join(words[:12])
 
 
 FAILURES: collections.Counter = collections.Counter()

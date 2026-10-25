@@ -230,13 +230,15 @@ class CacheKey(unittest.TestCase):
 
 
 class FailureCategory(unittest.TestCase):
-    def test_categories_never_echo_stderr(self):
+    def test_only_whitelisted_words_reach_the_log(self):
         f = A.failure_category
-        self.assertEqual(f(128, b"fatal: Authentication failed for 'x'"), "auth")
-        self.assertEqual(f(128, b"remote: Repository not found."), "notfound")
+        got = f(128, b"fatal: repository 'https://github.com/o/secret-repo.git/'"
+                     b" not found")
+        self.assertEqual(got, "exit128:fatal-repository-https-not-found")
+        self.assertNotIn("secret", got)
+        self.assertEqual(f(1, b"weird secret-repo text"), "exit1:")
         self.assertEqual(f(128, b"The requested URL returned error: 403"),
-                         "denied")
-        self.assertEqual(f(1, b"weird secret-repo text"), "exit1")
+                         "exit128:requested-url-returned-error-403")
 
 
 if __name__ == "__main__":

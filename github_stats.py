@@ -250,7 +250,9 @@ class Stats(object):
         self._languages = None
         self._repos = None
         self._lines_changed = None
-        self._views = None        
+        self._views = None
+        self._stats_lock = asyncio.Lock()
+        self._stats_done = False
 
     async def to_str(self) -> str:
         """
@@ -274,6 +276,16 @@ Languages:
   - {formatted_languages}"""
 
     async def get_stats(self) -> None:
+        """
+        Run _get_stats once, even when several images request it concurrently
+        (the authored-languages scan clones every repository)
+        """
+        async with self._stats_lock:
+            if not self._stats_done:
+                await self._get_stats()
+                self._stats_done = True
+
+    async def _get_stats(self) -> None:
         """
         Get lots of summary statistics using one big query. Sets many attributes
         """
