@@ -13,9 +13,13 @@ Optional input for the stats generator: `work-languages.json`.
   Older than 30 days: Actions warning, still merged.
 
 ```json
-{"schema": 1, "generated_at": "2026-10-25T20:00:00Z", "window_months": 24,
+{"schema": 1, "generated_at": "2026-10-25T20:00:00Z", "window_months": null,
  "metric": "bytes_added", "languages": {"Java": 1234567, "Gherkin": 23456}}
 ```
 
 `languages` keys are GitHub Linguist names; values are non-negative integer
-bytes of lines added in the window. Languages unknown from repos use `#8b949e`.
+bytes of lines added in the window.
+`window_months` may be `null` = the author's full history (the current publisher uses
+`null`). The publisher counts bytes of added lines deduplicated per (repository, path,
+line content), additive only (never subtracts), so squash merges, rebases, cherry-picks
+and deleted branches are counted once. Known limitation: renamed files recount their lines. Languages unknown from repos use `#8b949e`.
