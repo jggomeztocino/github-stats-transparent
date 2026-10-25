@@ -52,6 +52,29 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
+    # The languages chart needs the author identity; fail before cloning anything
+    - name: Check AUTHOR_EMAILS
+      run: |
+        if [ -z "$AUTHOR_EMAILS" ]; then
+          echo "::error::AUTHOR_EMAILS secret is empty or missing; not publishing"
+          exit 1
+        fi
+      env:
+        AUTHOR_EMAILS: ${{ secrets.AUTHOR_EMAILS }}
+
+    - name: Unit tests
+      run: python3 -m unittest discover -s tests
+
+    # Per-repo authored-language results (file names are hashes, content is
+    # aggregate bytes per language). Unchanged repos are not recloned.
+    - name: Restore authored-languages cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cache/authored-languages
+        key: authored-languages-${{ github.run_id }}
+        restore-keys: |
+          authored-languages-
+
     # Generate all statistics images
     - name: Generate images
       run: |
@@ -63,6 +86,14 @@ jobs:
         EXCLUDED: ${{ secrets.EXCLUDED }}
         EXCLUDED_LANGS: ${{ secrets.EXCLUDED_LANGS }}
         COUNT_STATS_FROM_FORKS: ${{ secrets.COUNT_STATS_FROM_FORKS }}
+        AUTHOR_EMAILS: ${{ secrets.AUTHOR_EMAILS }}
+        AUTHORED_CACHE_DIR: ~/.cache/authored-languages
+
+    - name: Save authored-languages cache
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.cache/authored-languages
+        key: authored-languages-${{ github.run_id }}
 
     # Refuse to publish empty stats (e.g. token without access)
     - name: Check generated output

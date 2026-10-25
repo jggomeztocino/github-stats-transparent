@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import aiohttp
 import requests
 
+import authored_languages
 from external_languages import merge_external_languages
 
 
@@ -328,19 +329,6 @@ Languages:
                 self._stargazers += repo.get("stargazers").get("totalCount", 0)
                 self._forks += repo.get("forkCount", 0)
 
-                for lang in repo.get("languages", {}).get("edges", []):
-                    name = lang.get("node", {}).get("name", "Other")
-                    languages = await self.languages
-                    if name in self._exclude_langs: continue
-                    if name in languages:
-                        languages[name]["size"] += lang.get("size", 0)
-                        languages[name]["occurrences"] += 1
-                    else:
-                        languages[name] = {
-                            "size": lang.get("size", 0),
-                            "occurrences": 1,
-                            "color": lang.get("node", {}).get("color")
-                        }
 
             if owned_repos.get("pageInfo", {}).get("hasNextPage", False) or \
                     contrib_repos.get("pageInfo", {}).get("hasNextPage", False):
@@ -353,8 +341,20 @@ Languages:
             else:
                 break
 
+        # Languages chart: bytes of lines authored by the user (own repos),
+        # replacing GitHub's whole-repo Linguist sizes. Blocking git work, so
+        # it runs in a thread.
+        authored = await asyncio.to_thread(
+            authored_languages.run, self.queries.access_token,
+            os.getenv("AUTHOR_EMAILS"), self._exclude_repos,
+            os.getenv("AUTHORED_CACHE_DIR"))
+        for lang, data in authored.items():
+            if lang not in self._exclude_langs:
+                self._languages[lang] = data
+
         # Work-laptop languages (external/work-languages.json): merged after
-        # the GitHub repos, before percentages; EXCLUDED_LANGS still applies.
+        # the authored languages, before percentages; EXCLUDED_LANGS still
+        # applies.
         merge_external_languages(self._languages,
                                  exclude_langs=self._exclude_langs)
 
