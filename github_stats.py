@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Set, Tuple
 import aiohttp
 import requests
 
+from external_languages import merge_external_languages
+
 
 ###############################################################################
 # Main Classes
@@ -350,6 +352,11 @@ Languages:
                                 .get("endCursor", next_contrib))
             else:
                 break
+
+        # Work-laptop languages (external/work-languages.json): merged after
+        # the GitHub repos, before percentages; EXCLUDED_LANGS still applies.
+        merge_external_languages(self._languages,
+                                 exclude_langs=self._exclude_langs)
 
         # TODO: Improve languages to scale by number of contributions to
         #       specific filetypes
