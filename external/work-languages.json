@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated_at": "2026-10-25T22:58:55Z",
+  "generated_at": "2026-10-26T09:00:05Z",
   "window_months": null,
   "metric": "bytes_added",
   "languages": {
@@ -8,6 +8,6 @@
     "Java": 928082,
     "JavaScript": 3604,
     "Python": 746809,
-    "SQL": 52642
+    "SQL": 31188
   }
 }
